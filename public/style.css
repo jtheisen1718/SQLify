@@ -1,0 +1,67 @@
+/* General Styles */
+body {
+  font-family: 'Circular', sans-serif; /* Spotify's font, consider using an alternative like 'Lato' if not licensed */
+  padding: 2em 4em;
+  background-color: #181818; 
+  color: #FFFFFF;
+}
+
+h1 {
+  font-family: 'Circular', sans-serif;
+  color: #1DB954; /* Spotify Green */
+  text-align: center;
+  margin-bottom: 2em;
+  font-size: 2.5em;
+}
+
+/* Footer Styles */
+ul.footer {
+  list-style:none;
+  display:inline;
+}
+
+ul.footer li {
+  display:inline;
+  margin-right: 1em;
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  margin-top: 2em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+td, th {
+  padding: 15px 20px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+th {
+  background-color: #282828; /* Slightly lighter than the body */
+  color: #FFFFFF;
+  text-transform: uppercase; 
+  letter-spacing: 0.1em;
+}
+
+table a {
+  color: #1DB954; /* Spotify Green */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+table a:hover {
+  color: #FFFFFF;
+  text-decoration: underline;
+}
+
+/* Image Styles */
+.circular_image {
+  width: 150px;
+  margin: 0 auto;
+  display: block;
+  border-radius: 50%;
+  border: 4px solid #1DB954; /* Green border to highlight user image */
+}
+

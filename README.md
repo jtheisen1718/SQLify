@@ -1,1 +1,1 @@
-# SQLify
+# spotify-api-workshop
