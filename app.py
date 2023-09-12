@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from pprint import pprint
+from sqlalchemy import text
 
 app = Flask(__name__)
 CORS(app)  # Apply CORS to the Flask app
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tracks.db'  # Use an SQLite database named 'tracks.db' in the current directory
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tracks.db'  # Use a SQLite database named 'tracks.db' in the current directory
 db = SQLAlchemy(app)
 
 class Track(db.Model):
@@ -20,8 +21,8 @@ class Track(db.Model):
     album_name=db.Column(db.String)
     
 
-@app.route('/process_tracks', methods=['POST'])
-def process_tracks():
+@app.route('/get_dupes', methods=['POST'])
+def get_dupes():
     incoming_tracks = request.json['tracks']
 
     # Store the tracks in the database
@@ -41,14 +42,21 @@ def process_tracks():
     db.session.commit()
 
     # Query all tracks from the database
-    all_tracks = Track.query.all()
-    tracks_output = [{'track':{
-            'id': track.id,
-            'artist' : track.first_artist_name,
-            'artist_id' : track.first_artist_id,
-            'name': track.name,
-            'preview_url': track.preview_url
-    }} for track in all_tracks]
+    connection = db.engine.connect()
+    result = connection.execute(text("""SELECT name, first_artist_name, GROUP_CONCAT(album_name, ', ') AS album_list, GROUP_CONCAT(id, ',') AS id_list
+                                        FROM tracks
+                                        GROUP BY name, first_artist_name
+                                        HAVING COUNT(album_name) > 1;"""))
+    all_tracks = result.fetchall()
+    connection.close()
+
+    tracks_output = [{
+        'name' : row[0],
+        'artist' : row[1],
+        'album_list' : row[2],
+        'id_list' : row[3]
+    } for row in all_tracks]
+
     return jsonify(tracks_output)
 
 if __name__ == "__main__":

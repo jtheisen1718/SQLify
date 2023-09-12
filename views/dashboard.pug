@@ -1,26 +1,51 @@
 extends layout.pug
     
 block content
-    h1 Welcome! #{user.display_name} ✨
-    
-    img(src=user.images[0].url, class='circular_image')
+    h1 Welcome! #{user.display_name}. Select a source to find duplicates from
+
+    form(action="/fetchTracks" method="get")
+      select(name="playlistId")
+          each option in options
+              option(value=option.id) #{option.name}
+      button(type='submit') Fetch Tracks
 
     table 
       thead
         tr
-          th Artist
           th Track
-          th Preview
+          th Artist
+          th Albums
 
       tbody
-        each t in tracks
-          tr 
-            - var artist_name = t.track.artist
-            - var track_name = t.track.name
-            - var track_preview = t.track.preview_url
-            - var artist_id = t.track.artist_id
-            - var track_id = t.track.id 
+        if tracks
+          each t in tracks
+            tr 
+              - var name = t.name
+              - var artist = t.artist
+              - var album_list = t.album_list
 
-            td #{artist_name}
-            td: a(href='/recommendations?artist=' + artist_id+'&track='+track_id) #{track_name}
-            td: a(href=track_preview) Preview
+              td #{name}
+              td #{artist}
+              td #{album_list}
+
+        else
+          tr
+            td(colspan=4) No tracks found.
+    button#createPlaylist Create Spotify Playlist
+    
+    script.
+      document.querySelector("#createPlaylist").addEventListener('click', async function() {
+          const response = await fetch('/create_playlist', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ tracks: !{JSON.stringify(tracks)}, user_info: !{JSON.stringify(user)} })
+          });
+          const data = await response.json();
+          if (data.success) {
+              alert('Playlist created!');
+          } else {
+              alert('Error creating playlist!');
+          }
+      });
