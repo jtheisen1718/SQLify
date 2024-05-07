@@ -12,9 +12,8 @@ CORS(app)  # Apply CORS to the Flask app
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tracks.db'  # Use a SQLite database named 'library.db' in the current directory
 db = SQLAlchemy(app)
 
-# Entities
-
 class OldTrack(db.Model):
+    # Just here to support dupes until everything else is up and running
     __tablename__ = 'old_tracks'
     id = db.Column(db.String, primary_key=True)
     duration = db.Column(db.Integer)
@@ -32,6 +31,9 @@ class OldTrack(db.Model):
         self.first_artist_name=first_artist_name
         self.first_artist_id=first_artist_id
         self.album_name=album_name
+
+
+# Entities
 
 class Playlist(db.Model):
     __tablename__ = 'playlists'
@@ -360,7 +362,7 @@ def get_dupes():
                                         HAVING COUNT(album_name) > 1;"""))
     all_tracks = result.fetchall()
     connection.close()
-    print(all_tracks)
+
     tracks_output = [{
         'name' : row[0],
         'artist' : row[1],

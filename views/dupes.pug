@@ -1,9 +1,10 @@
 extends layout.pug
     
 block content
-    form(action="/dashboard" method="get")
-      button(type="submit") Back
-    h1 Welcome! #{user.display_name}. 
+    div(style="display: flex; align-items: stretch")
+      form(action="/dashboard" method="get")
+        button(type="submit" class="back_button") Back
+      h1 Welcome! #{user.display_name}. 
     h2 Select a source to find duplicates from
 
     form(action="/fetchTracks" method="get")

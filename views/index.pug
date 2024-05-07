@@ -3,5 +3,5 @@ extends layout.pug
 block content
     h1 Jason Theisen's SQLify Project
     p This project is designed to allow for the querying of an individual's Spotify music library. Initially starting as a way to clean my library with of duplicated songs, I'm working to broaden it to be able to fully manage my library by uploading and downloading a SQL database.
-    div(align='center', style="display: flex; justify-content: center; align-items: center; background: #1DB954; width: 25%; margin: auto; height: 6em")
-        a(href='/authorize', style='font-size: 2em; color: #101010; font-weight: 900') Log in
+    form(action="/authorize" method="get")
+      button(type="submit") Log in to Spotify
