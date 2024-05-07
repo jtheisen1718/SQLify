@@ -1,51 +1,14 @@
-extends layout.pug
-    
+extends layout
+
 block content
-    h1 Welcome! #{user.display_name}. Select a source to find duplicates from
-
-    form(action="/fetchTracks" method="get")
-      select(name="playlistId")
-          each option in options
-              option(value=option.id) #{option.name}
-      button(type='submit') Fetch Tracks
-
-    table 
-      thead
-        tr
-          th Track
-          th Artist
-          th Albums
-
-      tbody
-        if tracks
-          each t in tracks
-            tr 
-              - var name = t.name
-              - var artist = t.artist
-              - var album_list = t.album_list
-
-              td #{name}
-              td #{artist}
-              td #{album_list}
-
-        else
-          tr
-            td(colspan=4) No tracks found.
-    button#createPlaylist Create Spotify Playlist
+  .dashboard-container
+    h1 Dashboard
+    p.intro Welcome to the Dashboard. Choose an option below:
     
-    script.
-      document.querySelector("#createPlaylist").addEventListener('click', async function() {
-          const response = await fetch('/create_playlist', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ tracks: !{JSON.stringify(tracks)}, user_info: !{JSON.stringify(user)} })
-          });
-          const data = await response.json();
-          if (data.success) {
-              alert('Playlist created!');
-          } else {
-              alert('Error creating playlist!');
-          }
-      });
+    .button-container
+      form(action="/downloadFullDatabase" method="get")
+        button(type="submit") Download full database
+      form(action="/dupes" method="get")
+        button(type="submit") Go to Dupes
+      form(action="/customRequest" method="get")
+        button(type="submit") Go to Custom Request

@@ -1,6 +1,9 @@
 import express from "express";
 import fetch from "node-fetch";
 
+// Start server with npm run start
+
+// App setup
 const app = express();
 
 app.set("views", "./views");
@@ -15,8 +18,59 @@ const client_secret = "36d9f67f3f8849e9adf563bbffafdf2b";
 
 global.access_token;
 
+// Functions =================================================
+async function getData(endpoint) {
+  // Fetches data from the spotify API according to the endpoint.
+  // info on what data is fetched can be obtained by checking the 
+  // spotify API documentation. 
+  const response = await fetch("https://api.spotify.com/v1" + endpoint, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer " + global.access_token,
+    },
+  });
+
+  const data = await response.json();
+  return data;
+}
+
+async function getAllData(endpoint) {
+  // To be used when a request returns a paginated response.
+  var data = await getData(endpoint);
+  var items = data.items;
+  while (data.next) {
+    var response = await fetch(data.next, {
+      method: "get",
+      headers: {
+        Authorization: "Bearer " + global.access_token,
+      },
+    });
+    data = await response.json();
+    items.push(...data.items);
+  }
+  return items;
+}
+
+async function get_dupes(tracks) {
+  console.log("Trying to access 5001");
+  const response = await fetch("http://127.0.0.1:5001/get_dupes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ tracks: tracks }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
+// Pages =====================================================
+
+// Landing page. Renders index.pug
 app.get("/", function (req, res) {
   res.render("index");
+  
 });
 
 app.get("/authorize", (req, res) => {
@@ -54,67 +108,47 @@ app.get("/callback", async (req, res) => {
   res.redirect("/dashboard");
 });
 
-async function getData(endpoint) {
-  const response = await fetch("https://api.spotify.com/v1" + endpoint, {
-    method: "get",
-    headers: {
-      Authorization: "Bearer " + global.access_token,
-    },
-  });
-
-  const data = await response.json();
-  return data;
-}
-
-async function getAllData(endpoint) {
-  var response = await fetch("https://api.spotify.com/v1" + endpoint, {
-    method: "get",
-    headers: {
-      Authorization: "Bearer " + global.access_token,
-    },
-  });
-
-  var data = await response.json();
-  var items = await data.items;
-  while (data.next) {
-    var response = await fetch(data.next, {
-      method: "get",
-      headers: {
-        Authorization: "Bearer " + global.access_token,
-      },
-    });
-    data = await response.json();
-    items.push(...data.items);
-  }
-  return items;
-}
-
-async function get_dupes(tracks) {
-  const response = await fetch("http://127.0.0.1:5001/get_dupes", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ tracks: tracks }),
-  });
-
-  const data = await response.json();
-  return data;
-}
-
 app.get("/dashboard", async (req, res) => {
+  res.render('dashboard')
+});
+
+app.get("/loadDatabase", async (req, res) => {
+  // this should not be re-requesting here. The userInfo needs to be global
+  // Fetch user info for rendering dupes
+  const userInfo = await getData("/me");
+
+  let tracks;
+  if (playlistId === "Your Saved Songs") {
+    tracks = await getAllData("/me/tracks?limit=50");
+  } else {
+    // Fetch the tracks of the playlist with the given playlistId
+    tracks = await getAllData(`/playlists/${playlistId}/tracks?limit=50`);
+  }
+  // Find duplicates
+  const duplicated_tracks = await get_dupes(tracks);
+  // Render the dupes view with the fetched tracks
+  res.render("dupes", {
+    user: userInfo,
+    options: dropdownOptions,
+    tracks: duplicated_tracks,
+  });
+});
+
+app.get("/dupes", async (req, res) => {
   const userInfo = await getData("/me");
   const dropdownOptions = await getAllData("/me/playlists?limit=50");
+
   await dropdownOptions.sort((a, b) => {
     var textA = a.name.toUpperCase();
     var textB = b.name.toUpperCase();
     return textA < textB ? -1 : textA > textB ? 1 : 0;
   });
+
   await dropdownOptions.unshift({ name: "Your Saved Songs", id: "Your Saved Songs"});
 
   let duplicated_tracks = [];
 
-  res.render("dashboard", { user: userInfo, tracks: duplicated_tracks, options: dropdownOptions });
+  res.render("dupes", { user: userInfo, tracks: duplicated_tracks, options: dropdownOptions });
 });
 
 app.get("/fetchTracks", async (req, res) => {
@@ -124,8 +158,8 @@ app.get("/fetchTracks", async (req, res) => {
     return res.status(400).send('Playlist ID is required.');
   }
 
-  // this should not be re-requesting here. This needs to be removed somehow
-  // Fetch user info for rendering dashboard
+  // this should not be re-requesting here. userInfo should be global
+  // Fetch user info for rendering dupes
   const userInfo = await getData("/me");
 
   // Fetch playlists for dropdown
@@ -147,8 +181,8 @@ app.get("/fetchTracks", async (req, res) => {
   }
   // Find duplicates
   const duplicated_tracks = await get_dupes(tracks);
-  // Render the dashboard view with the fetched tracks
-  res.render("dashboard", {
+  // Render the dupes view with the fetched tracks
+  res.render("dupes", {
     user: userInfo,
     options: dropdownOptions,
     tracks: duplicated_tracks,
@@ -212,19 +246,9 @@ app.post("/create_playlist", async (req, res) => {
   }
 });
 
-/* app.get("/recommendations", async (req, res) => {
-  const artist_id = req.query.artist;
-  const track_id = req.query.track;
-
-  const params = new URLSearchParams({
-    seed_artist: artist_id,
-    seed_genres: "rock",
-    seed_tracks: track_id,
-  });
-
-  const data = await getData("/recommendations?" + params);
-  res.render("recommendation", { tracks: data.tracks });
-}); */
+app.get("/customRequest", (req, res) => {
+  res.render("customRequest");
+});
 
 let listener = app.listen(3000, function () {
   console.log("Your app is listening on http://localhost:" + listener.address().port);

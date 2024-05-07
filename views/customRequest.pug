@@ -1,0 +1,16 @@
+extends layout.pug 
+
+block content
+    form(action="/fetchTracks" method="post")
+        textarea(name='sqlQuery' placeholder='Enter SQL query here' required)
+        button(type='submit') Submit Query
+
+    script.
+        const textarea = document.querySelector('textarea[name="sqlQuery"]');
+
+        textarea.addEventListener('input', autoResize, false);
+
+        function autoResize() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        }
