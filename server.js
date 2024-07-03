@@ -52,7 +52,6 @@ async function getAllData(endpoint) {
 }
 
 async function get_dupes(tracks) {
-  console.log("Trying to access 5001");
   const response = await fetch("http://127.0.0.1:5001/get_dupes", {
     method: "POST",
     headers: {
@@ -65,12 +64,19 @@ async function get_dupes(tracks) {
   return data;
 }
 
+function chunkArray(array, chunkSize) {
+  let chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
 // Pages =====================================================
 
 // Landing page. Renders index.pug
 app.get("/", function (req, res) {
   res.render("index");
-  
 });
 
 app.get("/authorize", (req, res) => {
@@ -109,69 +115,46 @@ app.get("/callback", async (req, res) => {
 });
 
 app.get("/dashboard", async (req, res) => {
-  res.render('dashboard')
-});
-
-app.get("/loadDatabase", async (req, res) => {
-  // this should not be re-requesting here. The userInfo needs to be global
-  // Fetch user info for rendering dupes
-  const userInfo = await getData("/me");
-
-  let tracks;
-  if (playlistId === "Your Saved Songs") {
-    tracks = await getAllData("/me/tracks?limit=50");
-  } else {
-    // Fetch the tracks of the playlist with the given playlistId
-    tracks = await getAllData(`/playlists/${playlistId}/tracks?limit=50`);
-  }
-  // Find duplicates
-  const duplicated_tracks = await get_dupes(tracks);
-  // Render the dupes view with the fetched tracks
-  res.render("dupes", {
-    user: userInfo,
-    options: dropdownOptions,
-    tracks: duplicated_tracks,
-  });
-});
-
-app.get("/dupes", async (req, res) => {
-  const userInfo = await getData("/me");
-  const dropdownOptions = await getAllData("/me/playlists?limit=50");
-
-  await dropdownOptions.sort((a, b) => {
+  global.userInfo = await getData("/me");
+  
+  global.playlists = await getAllData("/me/playlists?limit=50");
+  await global.playlists.sort((a, b) => {
     var textA = a.name.toUpperCase();
     var textB = b.name.toUpperCase();
     return textA < textB ? -1 : textA > textB ? 1 : 0;
   });
+  await global.playlists.unshift({ name: "Your Saved Songs", id: "Your Saved Songs"});
 
-  await dropdownOptions.unshift({ name: "Your Saved Songs", id: "Your Saved Songs"});
-
-  let duplicated_tracks = [];
-
-  res.render("dupes", { user: userInfo, tracks: duplicated_tracks, options: dropdownOptions });
+  res.render('dashboard')
 });
 
-app.get("/fetchTracks", async (req, res) => {
+app.get("/loadLanding", async (req, res) => {
+  res.render("loadLanding");
+});
+
+app.get("/loadDatabase", async (req, res) => {
+  const playlistIds = req.query.playlistIds;
+  console.log(playlistIds);
+  
+  res.render("loadDatabase");
+});
+
+app.get("/dupesLanding", async (req, res) => {
+  let duplicated_tracks = [];
+
+  res.render("dupesLanding", { tracks: duplicated_tracks });
+});
+
+app.get("/dupes", async (req, res) => {
   const playlistId = req.query.playlistId;
+  const playlist_info = await getData(`/playlists/${playlistId}`);
+  const playlistName = playlist_info.name;
+
   // Check if playlistId is provided
   if (!playlistId) {
     return res.status(400).send('Playlist ID is required.');
   }
 
-  // this should not be re-requesting here. userInfo should be global
-  // Fetch user info for rendering dupes
-  const userInfo = await getData("/me");
-
-  // Fetch playlists for dropdown
-  const dropdownOptions = await getAllData("/me/playlists?limit=50");
-  await dropdownOptions.sort((a, b) => {
-    var textA = a.name.toUpperCase();
-    var textB = b.name.toUpperCase();
-    return textA < textB ? -1 : textA > textB ? 1 : 0;
-  });
-  await dropdownOptions.unshift({ name: "Your Saved Songs", id: "Your Saved Songs"});
-  // ================================
-
   let tracks;
   if (playlistId === "Your Saved Songs") {
     tracks = await getAllData("/me/tracks?limit=50");
@@ -180,35 +163,26 @@ app.get("/fetchTracks", async (req, res) => {
     tracks = await getAllData(`/playlists/${playlistId}/tracks?limit=50`);
   }
   // Find duplicates
-  const duplicated_tracks = await get_dupes(tracks);
+  const duplicatedTracks = await get_dupes(tracks);
   // Render the dupes view with the fetched tracks
   res.render("dupes", {
-    user: userInfo,
-    options: dropdownOptions,
-    tracks: duplicated_tracks,
+    tracks: duplicatedTracks,
+    playlistName: playlistName
   });
 });
 
-function chunkArray(array, chunkSize) {
-  let chunks = [];
-  for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
 app.post("/create_playlist", async (req, res) => {
   const tracks = req.body.tracks;
-  const user_id = req.body.user_info.id;
+  const playlist_name = req.body.playlist_name;
   // 1. Create a new playlist using Spotify API
-  const createPlaylistResponse = await fetch(`https://api.spotify.com/v1/users/${user_id}/playlists`, {
+  const createPlaylistResponse = await fetch(`https://api.spotify.com/v1/users/${global.userInfo.id}/playlists`, {
       method: "POST",
       headers: {
           Authorization: "Bearer " + global.access_token,
           "Content-Type": "application/json"
       },
       body: JSON.stringify({
-          name: "Dupes",
+          name: `Dupes from ${playlist_name}`,
           description: "Generated by SQLify"
       })
   });

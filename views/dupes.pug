@@ -4,15 +4,8 @@ block content
     div(style="display: flex; align-items: stretch")
       form(action="/dashboard" method="get")
         button(type="submit" class="back_button") Back
-      h1 Welcome! #{user.display_name}. 
-    h2 Select a source to find duplicates from
-
-    form(action="/fetchTracks" method="get")
-      select(name="playlistId")
-          each option in options
-              option(value=option.id) #{option.name}
-      button(type='submit') Fetch Tracks
-
+      h1 Welcome! #{global.userInfo.display_name}. 
+    p Here are the duplicates from #{playlistName}:
     table 
       thead
         tr
@@ -44,7 +37,7 @@ block content
               headers: {
                   'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ tracks: !{JSON.stringify(tracks)}, user_info: !{JSON.stringify(user)} })
+              body: JSON.stringify({ tracks: !{JSON.stringify(tracks)}, playlist_name: !{JSON.stringify(playlistName)} })
           });
           const data = await response.json();
           if (data.success) {

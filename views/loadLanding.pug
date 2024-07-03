@@ -1,0 +1,16 @@
+extends layout.pug
+    
+block content
+    div(style="display: flex; align-items: stretch")
+      form(action="/dashboard" method="get")
+        button(type="submit" class="back_button") Back
+      h1 Welcome! #{global.userInfo.display_name}. 
+    h2 Select sources to load into the database:
+
+    form(action="/loadDatabase" method="get")
+      .checkbox-grid
+          each option in global.playlists
+              label
+                  input(type="checkbox", name="playlistIds", value=option.id)
+                  | #{option.name}
+      button(type='submit') Load Database

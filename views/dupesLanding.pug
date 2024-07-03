@@ -1,0 +1,14 @@
+extends layout.pug
+    
+block content
+    div(style="display: flex; align-items: stretch")
+      form(action="/dashboard" method="get")
+        button(type="submit" class="back_button") Back
+      h1 Welcome! #{global.userInfo.display_name}. 
+    h2 Select a source to find duplicates from
+
+    form(action="/dupes" method="get")
+      select(name="playlistId")
+          each option in global.playlists
+              option(value=option.id) #{option.name}
+      button(type='submit') Fetch Tracks

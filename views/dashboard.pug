@@ -4,11 +4,12 @@ block content
   .dashboard-container
     h1 Dashboard
     p.intro Welcome to the Dashboard. Choose an option below:
+    p Currently Dupes is the only functioning option
     
     .button-container
-      form(action="/downloadFullDatabase" method="get")
-        button(type="submit") Download full database
-      form(action="/dupes" method="get")
-        button(type="submit") Go to Dupes
+      form(action="/loadLanding" method="get")
+        button(type="submit") Load Database
+      form(action="/dupesLanding" method="get")
+        button(type="submit") Dupes
       form(action="/customRequest" method="get")
         button(type="submit") Go to Custom Request
