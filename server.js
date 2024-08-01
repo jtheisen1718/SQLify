@@ -77,6 +77,19 @@ async function load_playlists(user_id, playlists) {
   return data;
 }
 
+async function load_tracks(user_id, playlists) {
+  const response = await fetch("http://127.0.0.1:5001/load_tracks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user_id: user_id, playlists: playlists }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
 function chunkArray(array, chunkSize) {
   let chunks = [];
   for (let i = 0; i < array.length; i += chunkSize) {
@@ -183,9 +196,13 @@ app.get("/load", async (req, res) => {
 
   console.log(selected_playlists);
 
-  var failures = await load_playlists(global.userInfo.id, selected_playlists);
+  // Load E1
+  var playlist_failures = await load_playlists(global.userInfo.id, selected_playlists);
+  console.log(playlist_failures);
 
-  console.log(failures);
+  // Load E2, R1
+  var track_failures = await load_tracks(global.userInfo.id, selected_playlists);
+  console.log(track_failures);
 
   res.render("load");
 });

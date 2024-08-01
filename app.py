@@ -204,22 +204,34 @@ def load_tracks():
     # updates the 'playlist_tracks' table with the new relationships.
     # Now that these tables have been updated, the same list of track objects
     # should be sent to load_artists and then load_albums in that order
-    incoming_tracks = request.json['tracks']
-    playlist_id = request.json['playlist_id']
+    playlists = request.json['playlists']
 
-    for item in incoming_tracks:
-        spotify_track = item['track']
-        new_track = Track(spotify_track)
+    successfully_loaded = {}
 
-        # E2. INSERT TRACK ENTITY
-        db.session.merge(new_track)
-        playlist_track = PlaylistTrack(playlist_id,spotify_track['id'],item['added_at'])
-        # R1. INSERT PLAYLIST_TRACK RELATIONSHIP
-        db.session.merge(playlist_track)
+    added_tracks = []
+
+    for playlist in playlists:
+        playlist_id = playlist['id']
+        successfully_loaded[playlist_id] = {}
+
+        for item in playlist['tracks']:
+            new_track = Track(item['track'])
+
+            successfully_loaded[playlist_id][new_track.id] = False
+
+            # E2. INSERT TRACK ENTITY
+            if new_track.id not in added_tracks:
+                db.session.merge(new_track)
+                added_tracks.append(new_track.id)
+            
+            playlist_track = PlaylistTrack(playlist_id, new_track.id, item['added_at'])
+            # R1. INSERT PLAYLIST_TRACK RELATIONSHIP
+            db.session.merge(playlist_track)
+            successfully_loaded[playlist_id][new_track.id] = True
 
     db.session.commit()
 
-    return jsonify({'message': 'Tracks loaded successfully'})
+    return jsonify({'message': successfully_loaded})
 
 @app.route('/load_artists', methods=['POST'])
 def load_artists():
