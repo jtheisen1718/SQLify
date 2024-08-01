@@ -7,10 +7,13 @@ block content
       h1 Welcome! #{global.userInfo.display_name}. 
     h2 Select sources to load into the database:
 
-    form(action="/loadDatabase" method="get")
+    form(action="/load" method="get")
       .checkbox-grid
           each option in global.playlists
               label
-                  input(type="checkbox", name="playlistIds", value=option.id)
+                  input(type="checkbox", name="playlist_ids", value=option.id)
                   | #{option.name}
       button(type='submit') Load Database
+    
+    //- form(action="/load" method="get")
+    //-   button(type='submit', name='playlist_ids', value=global.playlist_ids) Load All Playlists

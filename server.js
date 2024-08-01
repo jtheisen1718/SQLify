@@ -64,6 +64,19 @@ async function get_dupes(tracks) {
   return data;
 }
 
+async function load_playlists(user_id, playlists) {
+  const response = await fetch("http://127.0.0.1:5001/load_playlists", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user_id: user_id, playlists: playlists }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
 function chunkArray(array, chunkSize) {
   let chunks = [];
   for (let i = 0; i < array.length; i += chunkSize) {
@@ -116,14 +129,46 @@ app.get("/callback", async (req, res) => {
 
 app.get("/dashboard", async (req, res) => {
   global.userInfo = await getData("/me");
+
+  var playlist_ids = await getAllData("/me/playlists?limit=50");
+  playlist_ids = playlist_ids.map((playlist) => {
+    return playlist.id;
+  });
+
+  global.playlists = await Promise.all(
+    playlist_ids.map(async (id) => {
+      return await getData(`/playlists/${id}`);
+    })
+  );
   
-  global.playlists = await getAllData("/me/playlists?limit=50");
   await global.playlists.sort((a, b) => {
     var textA = a.name.toUpperCase();
     var textB = b.name.toUpperCase();
     return textA < textB ? -1 : textA > textB ? 1 : 0;
   });
-  await global.playlists.unshift({ name: "Your Saved Songs", id: "Your Saved Songs"});
+  
+  // Currently I have this weird abstraction where I want to treat saved songs
+  // as a playlist even though they aren't. For that reason, I'm adding a fake 
+  // playlist object below. This could definitely complicate things later on,
+  // but fixing it now would require a lot of changes that seem like they might
+  // not be necessary. I'm going to leave it and might come back to change it later.  
+  var num_tracks = await getData("/me/tracks");
+  num_tracks = num_tracks.total;
+  var saved_songs = {
+    id: "yoursavedsongs",
+    name: "Your Saved Songs",
+    description: "",
+    tracks: {"total" : num_tracks},
+    followers: {"total" : 0 },
+    owner_id: global.userInfo.id,
+    owner: global.userInfo,
+    owned_by_user: true,
+    public: false,
+    collaborative: false,
+    images: [{url: ""}],
+  };
+  
+  await global.playlists.unshift(saved_songs);
 
   res.render('dashboard')
 });
@@ -132,11 +177,17 @@ app.get("/loadLanding", async (req, res) => {
   res.render("loadLanding");
 });
 
-app.get("/loadDatabase", async (req, res) => {
-  const playlistIds = req.query.playlistIds;
-  console.log(playlistIds);
-  
-  res.render("loadDatabase");
+app.get("/load", async (req, res) => {
+  const playlist_ids = req.query.playlist_ids;
+  var selected_playlists = global.playlists.filter(obj => playlist_ids.includes(obj.id));
+
+  console.log(selected_playlists);
+
+  var failures = await load_playlists(global.userInfo.id, selected_playlists);
+
+  console.log(failures);
+
+  res.render("load");
 });
 
 app.get("/dupesLanding", async (req, res) => {

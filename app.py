@@ -71,14 +71,16 @@ class Track(db.Model):
     explicit = db.Column(db.Boolean)
     #is_playable = db.Column(db.Boolean)
     preview_url = db.Column(db.String)
+    saved = db.Column(db.Boolean)
 
     # A spotify_track object is a track response from the Spotify API
-    def __init__(self, spotify_track):
+    def __init__(self, spotify_track, saved=False):
         self.id=spotify_track['id']
         self.name = spotify_track['name']
         self.duration = spotify_track['duration_ms']
         self.explicit = spotify_track['explicit']
         self.preview_url = spotify_track['preview_url']
+        self.saved = saved
 
 class Artist(db.Model):
     __tablename__ = 'artists'
@@ -165,8 +167,8 @@ class PlaylistTrack(db.Model):
         self.track_id=track_id
         self.added_at=added_at
 
-@app.route('/load_playlist', methods=['POST'])
-def load_playlist():
+@app.route('/load_playlists', methods=['POST'])
+def load_playlists():
     # Upon the loading of a new database, the playlist must be loaded first.
     # This should immediately be followed by a complete fetch of all the 
     # tracks in javascript. That list should be sent to load_tracks to be
@@ -174,19 +176,22 @@ def load_playlist():
     # load_playlist should be sent a request with a 'playlist' object and a
     # 'user_id' string. The 'playlist' object should come straight from the 
     # Spotify API.
-    incoming_playlist = request.json['playlist']
+    incoming_playlists = request.json['playlists']
     user_id = request.json['user_id']
 
-    if (incoming_playlist['owner']['id'] == user_id):
-        playlist = Playlist(incoming_playlist, user_id)
-        # E1. INSERT PLAYLIST ENTITY
-        db.session.merge(playlist)
+    successfully_loaded = {}
 
-        db.session.commit()
+    for incoming_playlist in incoming_playlists:
+        if (incoming_playlist['owner']['id'] == user_id):
+            playlist = Playlist(incoming_playlist, user_id)
+            # E1. INSERT PLAYLIST ENTITY
+            db.session.merge(playlist)
+            successfully_loaded[incoming_playlist['id']] = True
+        else:
+            successfully_loaded[incoming_playlist['id']] = False
+    db.session.commit()
 
-        return jsonify({'message': 'Playlist loaded successfully'})
-    else:
-        return jsonify({'message': 'Playlist is not owned by user, but instead followed. Followed playlists are not yet supported.'})
+    return jsonify({'successes' : successfully_loaded})
 
 @app.route('/load_tracks', methods=['POST'])
 def load_tracks():
@@ -332,8 +337,6 @@ def load_albums():
 # Add checkers like those in load_albums to the other load functions
 # additionally, I want to create a function that takes a playlist
 # and automates the whole adding process
-
-
 
 @app.route('/get_dupes', methods=['POST'])
 def get_dupes():
