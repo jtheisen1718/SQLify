@@ -71,16 +71,15 @@ class Track(db.Model):
     explicit = db.Column(db.Boolean)
     #is_playable = db.Column(db.Boolean)
     preview_url = db.Column(db.String)
-    saved = db.Column(db.Boolean)
+    # No saved feature here, that should be implemented elsewhere
 
     # A spotify_track object is a track response from the Spotify API
-    def __init__(self, spotify_track, saved=False):
+    def __init__(self, spotify_track):
         self.id=spotify_track['id']
         self.name = spotify_track['name']
         self.duration = spotify_track['duration_ms']
         self.explicit = spotify_track['explicit']
         self.preview_url = spotify_track['preview_url']
-        self.saved = saved
 
 class Artist(db.Model):
     __tablename__ = 'artists'
@@ -204,30 +203,27 @@ def load_tracks():
     # updates the 'playlist_tracks' table with the new relationships.
     # Now that these tables have been updated, the same list of track objects
     # should be sent to load_artists and then load_albums in that order
-    playlists = request.json['playlists']
+    playlist_id = request.json['playlist_id']
+    tracks = request.json['tracks']
 
     successfully_loaded = {}
 
     added_tracks = []
 
-    for playlist in playlists:
-        playlist_id = playlist['id']
-        successfully_loaded[playlist_id] = {}
+    for track_object in tracks:
+        track = track_object['track']
+        new_track = Track(track)
+        successfully_loaded[new_track.id] = False
 
-        for item in playlist['tracks']:
-            new_track = Track(item['track'])
-
-            successfully_loaded[playlist_id][new_track.id] = False
-
-            # E2. INSERT TRACK ENTITY
-            if new_track.id not in added_tracks:
-                db.session.merge(new_track)
-                added_tracks.append(new_track.id)
-            
-            playlist_track = PlaylistTrack(playlist_id, new_track.id, item['added_at'])
-            # R1. INSERT PLAYLIST_TRACK RELATIONSHIP
-            db.session.merge(playlist_track)
-            successfully_loaded[playlist_id][new_track.id] = True
+        # E2. INSERT TRACK ENTITY
+        if new_track.id not in added_tracks:
+            db.session.merge(new_track)
+            added_tracks.append(new_track.id)
+        
+        playlist_track = PlaylistTrack(playlist_id, new_track.id, track_object['added_at'])
+        # R1. INSERT PLAYLIST_TRACK RELATIONSHIP
+        db.session.merge(playlist_track)
+        successfully_loaded[new_track.id] = True
 
     db.session.commit()
 
@@ -390,4 +386,4 @@ def get_dupes():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()  # Create the tables in the database
-    app.run(port=5001)
+    app.run(port=5001,debug=True)

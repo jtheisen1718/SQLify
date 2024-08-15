@@ -19,11 +19,11 @@ const client_secret = "36d9f67f3f8849e9adf563bbffafdf2b";
 global.access_token;
 
 // Functions =================================================
-async function getData(endpoint) {
+async function getData(endpoint, fullHref) {
   // Fetches data from the spotify API according to the endpoint.
   // info on what data is fetched can be obtained by checking the 
   // spotify API documentation. 
-  const response = await fetch("https://api.spotify.com/v1" + endpoint, {
+  const response = await fetch(fullHref ? endpoint : "https://api.spotify.com/v1" + endpoint, {
     method: "GET",
     headers: {
       Authorization: "Bearer " + global.access_token,
@@ -34,9 +34,9 @@ async function getData(endpoint) {
   return data;
 }
 
-async function getAllData(endpoint) {
+async function getAllData(endpoint, fullHref=false) {
   // To be used when a request returns a paginated response.
-  var data = await getData(endpoint);
+  var data = await getData(endpoint, fullHref);
   var items = data.items;
   while (data.next) {
     var response = await fetch(data.next, {
@@ -77,13 +77,18 @@ async function load_playlists(user_id, playlists) {
   return data;
 }
 
-async function load_tracks(user_id, playlists) {
+async function load_tracks(user_id, playlist) {
+  var playlist_id = playlist.id;
+  console.log('playlist', playlist);
+  console.log('playlist.tracks.href', playlist.tracks.href);
+  var tracks = await getAllData(playlist.tracks.href, true);
+  console.log('tracks', await tracks);
   const response = await fetch("http://127.0.0.1:5001/load_tracks", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ user_id: user_id, playlists: playlists }),
+    body: JSON.stringify({ user_id: user_id, playlist_id: playlist_id, tracks: tracks}),
   });
 
   const data = await response.json();
@@ -194,14 +199,16 @@ app.get("/load", async (req, res) => {
   const playlist_ids = req.query.playlist_ids;
   var selected_playlists = global.playlists.filter(obj => playlist_ids.includes(obj.id));
 
-  console.log(selected_playlists);
-
   // Load E1
   var playlist_failures = await load_playlists(global.userInfo.id, selected_playlists);
   console.log(playlist_failures);
 
   // Load E2, R1
-  var track_failures = await load_tracks(global.userInfo.id, selected_playlists);
+  var track_failures = {};
+  for (var i = 0; i < selected_playlists.length; i++) {
+    console.log("loading tracks from playlist: " + selected_playlists[i].name);
+    track_failures[selected_playlists[i].id] = await load_tracks(global.userInfo.id, selected_playlists[i]);
+  }
   console.log(track_failures);
 
   res.render("load");
