@@ -1,5 +1,6 @@
 import express from "express";
 import fetch from "node-fetch";
+import dotenv from "dotenv";
 
 // Start server with npm run start
 
@@ -12,9 +13,9 @@ app.set("view engine", "pug");
 app.use(express.static("public"));
 app.use(express.json());
 
-const redirect_uri = "http://localhost:3000/callback";
-const client_id = "6d6ccee474db4f3fa661cfc1e0386129";
-const client_secret = "36d9f67f3f8849e9adf563bbffafdf2b";
+const redirect_uri = process.env.REDIRECT_URI;
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
 
 global.access_token;
 
